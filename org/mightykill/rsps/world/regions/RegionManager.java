@@ -88,14 +88,16 @@ public class RegionManager {
 	 */
 	public ArrayList<Player> getPlayersInArea(int rx, int ry) {
 		ArrayList<Player> areaPlayers = new ArrayList<Player>();
-		Collection<Player> allPlayers = Engine.players.getPlayerList();
+		Player[] allPlayers = Engine.players.getPlayerList();
 		
 		for(Player p:allPlayers) {
-			Point pPos = p.getCurrentRegionPoint();
-			
-			if(pPos.x >= rx-1 && pPos.x <= rx+1 &&
-				pPos.y >= ry-1 && pPos.y <= ry+1) {	//7x7 area should cover the entire minimap, so people dont just appear out of thin air
-				areaPlayers.add(p);
+			if(p != null) {
+				Point pPos = p.getCurrentRegionPoint();
+				
+				if(pPos.x >= rx-1 && pPos.x <= rx+1 &&
+					pPos.y >= ry-1 && pPos.y <= ry+1) {	//7x7 area should cover the entire minimap, so people dont just appear out of thin air
+					areaPlayers.add(p);
+				}
 			}
 		}
 
@@ -107,11 +109,13 @@ public class RegionManager {
 		NPC[] allNPCs = Engine.npcs.getNPCList();
 		
 		for(NPC n:allNPCs) {
-			Point nPos = n.getCurrentRegionPoint();
-			
-			if(nPos.x >= rx-1 && nPos.x <= rx+1 &&
-				nPos.y >= ry-1 && nPos.y <= ry+1) {	//7x7 area should cover the entire minimap, so people dont just appear out of thin air
-				areaNpcs.add(n);
+			if(n != null) {
+				Point nPos = n.getCurrentRegionPoint();
+				
+				if(nPos.x >= rx-1 && nPos.x <= rx+1 &&
+					nPos.y >= ry-1 && nPos.y <= ry+1) {	//7x7 area should cover the entire minimap, so people dont just appear out of thin air
+					areaNpcs.add(n);
+				}
 			}
 		}
 		

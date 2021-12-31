@@ -2,7 +2,6 @@ package org.mightykill.rsps.io.packets.outgoing;
 
 import java.awt.Point;
 import java.util.ArrayList;
-
 import org.mightykill.rsps.Engine;
 import org.mightykill.rsps.entities.Entity;
 import org.mightykill.rsps.entities.combat.Hit;
@@ -13,7 +12,6 @@ import org.mightykill.rsps.entities.player.Player;
 import org.mightykill.rsps.io.packets.BitPacker;
 import org.mightykill.rsps.items.Item;
 import org.mightykill.rsps.util.Misc;
-import org.mightykill.rsps.world.regions.Region;
 
 /**
  * Send a packet to the Client, informing it of required Player Updates.<br>
@@ -37,7 +35,7 @@ public class ClientSyncPlayers extends OutgoingPacket {
 		Movement pMove = p.getMovement();
 		Position pPos = pMove.getPosition();
 		Point localPos = pPos.getLocalPosition();
-		Point currentChunk = pPos.getCurrentChunk();
+
 		if(pMove.walkDir != -1 ||
 			pMove.runDir != -1 ||
 			p.appearanceUpdated ||
@@ -74,31 +72,29 @@ public class ClientSyncPlayers extends OutgoingPacket {
 			pack.addBits(1, 0);
 		}
 		
-		/* Local Client Block Updates */
-		if(p.appearanceUpdated) appendUpdateBlock(p, updateBlock);
+		//Local Client Block Updates
+		if(p.appearanceUpdated) appendUpdateBlock(p, updateBlock, false);
 		
 		//Update known players first
-		ArrayList<Player> updatedAppearences = new ArrayList<Player>();
-		Player[] knownPlayers = p.getSeenPlayers();
-		pack.addBits(8, p.getSeenPlayersCount());
-		for(int pIndex=0;pIndex<knownPlayers.length;pIndex++) {
-			Player other = knownPlayers[pIndex];
-			
+		ArrayList<Player> knownPlayers = p.getSeenPlayers();
+		ArrayList<Player> newPlayers = new ArrayList<Player>();
+		pack.addBits(8, knownPlayers.size());
+		for(Player other:knownPlayers) {	//Max surrounding player count is capped at 255 (8 bits sent above)
 			if(other != null) {
 				Movement oMove = other.getMovement();
 				boolean withinDistance = Misc.withinDistance(p, other);
 				
-				if(other.appearanceUpdated ||
+				if(other.appearanceUpdated ||	//An update occurred
 					oMove.walkDir != -1    ||
 					oMove.runDir != -1     ||
 					oMove.teleported ||
-					!withinDistance ||
-					!other.isConnected()) {	//An update occurred
+					!withinDistance ||		//No longer within distance
+					!other.isConnected()) {	//No longer connected
 					pack.addBits(1, 1);
 					
-					if(withinDistance && other.isConnected()) {
+					if(withinDistance && other.isConnected() && !other.isHidden()) {
 						if(oMove.walkDir != -1) {
-							if(oMove.runDir != -1) {	//We covered 2 tiles this tick (we did a run)
+							if(oMove.runDir != -1) {	//We covered 2 tiles this tick (running)
 								pack.addBits(2, 2);
 								
 								pack.addBits(3, oMove.walkDir);
@@ -110,14 +106,12 @@ public class ClientSyncPlayers extends OutgoingPacket {
 								pack.addBits(3, oMove.walkDir);
 								pack.addBits(1, other.appearanceUpdated?1:0);
 							}
-						}else {	//No movement update or teleported, I think
+						}else {	//No movement update
 							pack.addBits(2, 0);
 						}
-						
-						if(other.appearanceUpdated) updatedAppearences.add(other);
-					}else {	//Remove this Player from the update loop
-						p.forgetPlayer(other);
+					}else {	//Remove this Player from the client's update loop
 						pack.addBits(2, 3);
+						p.forgetPlayer(other);
 					}
 				}else {	//No update at all
 					pack.addBits(1, 0);
@@ -129,9 +123,9 @@ public class ClientSyncPlayers extends OutgoingPacket {
 		ArrayList<Player> localPlayers = Engine.players.getPlayersInArea(p);
 		localPlayers.remove(p);
 		for(Player localPlayer:localPlayers) {
-			int pIndex = p.getSeenPlayerIndex(localPlayer);
+			boolean known = knownPlayers.contains(localPlayer);
 			
-			if(pIndex == -1) {
+			if(!known && !localPlayer.isHidden() && p.seePlayer(localPlayer)) {	//If we don't know the Player and we can see them (not too many people around us), add them to the Client and the Server Entity
 				pack.addBits(11, localPlayer.getWorldIndex());
 				
 				Position newPlayerPos = localPlayer.getPosition();
@@ -146,102 +140,19 @@ public class ClientSyncPlayers extends OutgoingPacket {
 				pack.addBits(1, 1);
 				pack.addBits(5, yDiff);
 				
-				p.seePlayer(localPlayer);
-				localPlayer.appearanceUpdated = true;
-				updatedAppearences.add(localPlayer);
+				newPlayers.add(localPlayer);
 			}	//If we found the Player in the list, that means we know of them already; ignore them
 		}
 		
-		for(Player updated:updatedAppearences) {
-			appendUpdateBlock(updated, updateBlock);
-		}
-		/*localPlayers.remove(p);
-		ArrayList<Player> difference = Misc.getRemovingPlayers(p.localPlayers, localPlayers);	//List players that were previously updated, but no longer will be. Disconnected, teleported, moved out of region, etc...
-		p.localPlayers = (ArrayList<Player>) localPlayers.clone();
-		localPlayers.addAll(difference);
-		
-		ArrayList<Player> seenPlayerList = new ArrayList<Player>();		//We have updated these players before
-		ArrayList<Player> unseenPlayerList = new ArrayList<Player>();	//Client is not aware of these players yet
-		for(Player other:localPlayers) {
-			//Position otherPos = other.getPosition();
-			if(difference.contains(other) || other.getMovement().teleported) continue;	//Ignore Players that are being removed
-			if(!p.seenPlayer[other.getWorldIndex()]) {
-				unseenPlayerList.add(other);
-				p.seenPlayer[other.getWorldIndex()] = true;	//"See" them for the next iteration
-				other.appearanceUpdated = true;
-				//p.sendMessage("Adding player: "+other.getName());
-			}else {
-				seenPlayerList.add(other);
+		for(Player knownPlayer:knownPlayers) {
+			if(knownPlayer.appearanceUpdated && !knownPlayer.isHidden()) {
+				appendUpdateBlock(knownPlayer, updateBlock, false);
 			}
 		}
 		
-		//Update known players
-		pack.addBits(8, seenPlayerList.size());
-		for(Player other:seenPlayerList) {
-			Movement oMove = other.getMovement();
-			boolean removed = difference.contains(other);
-			if(other.appearanceUpdated ||
-				oMove.walkDir != -1 ||
-				oMove.runDir != -1 ||
-				oMove.teleported ||
-				removed) {
-				pack.addBits(1, 1);
-				
-				if(!removed || oMove.teleported) {
-					if(oMove.walkDir != -1) {
-						if(oMove.runDir != -1) {	//Running
-							pack.addBits(2, 2);
-							
-							pack.addBits(3, oMove.walkDir);
-							pack.addBits(3, oMove.runDir);
-							pack.addBits(1, other.appearanceUpdated?1:0);
-						}else {	//Walking
-							pack.addBits(2, 1);
-							
-							pack.addBits(3, oMove.walkDir);
-							pack.addBits(1, other.appearanceUpdated?1:0);
-						}
-					}else {	//No movement change
-						pack.addBits(2, 0);
-					}
-				}else {	//Remove from client's update list
-					pack.addBits(2, 3);
-				}
-			}else {	//No update at all
-				pack.addBits(1, 0);
-			}
+		for(Player newPlayer:newPlayers) {
+			appendUpdateBlock(newPlayer, updateBlock, true);
 		}
-
-		//Add Client to local updating player list
-		for(Player other:unseenPlayerList) {
-			pack.addBits(11, other.getWorldIndex());
-			Position otherPos = other.getPosition();
-			int yPos = otherPos.y - pPos.y;
-			int xPos = otherPos.x - pPos.x;
-			if (xPos < 0) {
-				xPos += 32;
-			}
-			if (yPos < 0) {
-				yPos += 32;
-			}
-
-			pack.addBits(5, xPos);
-			pack.addBits(1, 1);
-			pack.addBits(3, other.getMovement().getCurrentDirection());
-			pack.addBits(1, 1);
-			pack.addBits(5, yPos);
-		}
-		
-		//Update required players
-		for(Player other:localPlayers) {
-			if(difference.contains(other) || other.getMovement().teleported) {	//If we removed them, 'unsee' that player so they may be added later
-				//p.sendMessage("Removing "+other.getName());
-				p.localPlayers.remove(other);
-				p.seenPlayer[other.getWorldIndex()] = false;
-				continue;
-			}
-			if(other.appearanceUpdated) appendUpdateBlock(other, updateBlock);
-		}*/
 		
 		/* Build the packet */
 		byte[] updateData = updateBlock.getData();
@@ -253,18 +164,14 @@ public class ClientSyncPlayers extends OutgoingPacket {
 		if(updateData.length > 0) {	
 			addBytes(updateData);
 		}
-		
-		/* Debugging */
-		//System.out.println("["+origin.getName()+"]: Sent packet size: "+this.getPacketSize()+";\n"+PacketUtils.humanify(this.data));
 	}
 	
-	private void appendUpdateBlock(Player p, OutgoingPacket pack) {
-		if(!p.appearanceUpdated) return;
+	private void appendUpdateBlock(Player p, OutgoingPacket pack, boolean forceUpdate) {
 		int updateMask = 0;
 		
 		ArrayList<Hit> damage = p.getCombat().getDamageThisTick();
 		if(damage.size() > 1) updateMask |= 0x200;
-		if(p.appearanceUpdated) updateMask |= 0x80;
+		if(p.appearanceUpdated || forceUpdate) updateMask |= 0x80;
 		if(p.updateFaceCoords) updateMask |= 0x40;
 		if(p.updateFaceEntity) updateMask |= 0x20;
 		if(updateMask >= 0x100) updateMask |= 0x10;	//Any flags > 0x100 should be added above this line to be written correctly. Otherwise, they will be ignored
@@ -280,7 +187,7 @@ public class ClientSyncPlayers extends OutgoingPacket {
 		if(p.updateFaceEntity) sendFaceEntity(p.facingEntity, pack);
 		if(p.chatMessage != null) sendChat(p, pack);
 		if(p.updateAnimation) sendAnimation(p.currentAnimation, pack);
-		if(p.appearanceUpdated) appendPlayerAppearance(p, pack);
+		if(p.appearanceUpdated || forceUpdate) appendPlayerAppearance(p, pack);
 		if(damage.size() >= 1) sendHit1(p, damage.get(0), pack); 
 	}
 	
@@ -309,11 +216,11 @@ public class ClientSyncPlayers extends OutgoingPacket {
 		int id = -1;
 		if(facing != null) {
 			id = facing.getWorldIndex();
+			if(facing instanceof NPC) {
+				id |= 0x8000;
+			}
 		}
-		if(facing instanceof NPC) {
-			id |= 0x8000;
-		}
-
+		
 		pack.addShort(id);
 	}
 	

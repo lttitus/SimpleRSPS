@@ -12,6 +12,7 @@ import org.mightykill.rsps.entities.Entity;
 import org.mightykill.rsps.entities.movement.Movement;
 import org.mightykill.rsps.entities.movement.Position;
 import org.mightykill.rsps.entities.player.Player;
+import org.mightykill.rsps.util.Misc;
 
 public class NPCManager {
 	
@@ -116,14 +117,10 @@ public class NPCManager {
 	
 	public ArrayList<NPC> getNPCsInArea(Entity e) {
 		ArrayList<NPC> npcs = new ArrayList<NPC>();
-		Position ePos = e.getPosition();
 		
 		for(NPC n:npcList) {
 			if(n != null) {
-				Position nPos = n.getPosition();
-				
-				if(nPos.x >= ePos.x-15 && nPos.x <= ePos.x+15 &&
-					nPos.y >= ePos.y-15 && nPos.y <= ePos.y+15) {
+				if(Misc.withinDistance(e, n)) {
 					npcs.add(n);
 				}
 			}

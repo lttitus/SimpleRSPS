@@ -14,12 +14,12 @@ public class AttackPlayer extends IncomingPacket {
 
 	public void handlePacket() {
 		int attackId = nextUnsignedShortBigEndian();
-		Player attacking = Engine.getPlayer(attackId);
+		/*Player attacking = Engine.getPlayer(attackId);
 		
 		if(attacking != null) {
 			p.faceEntity(attacking);
 			p.getCombat().setAttacking(attacking);
-		}
+		}*/
 	}
 
 }

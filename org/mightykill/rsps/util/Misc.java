@@ -856,7 +856,7 @@ public class Misc {
 		Position cPos = control.getPosition();	//Central position
 		Position tPos = test.getPosition();
 		
-		return (tPos.x >= cPos.x-15 && tPos.y >= cPos.y-15 && tPos.x <= cPos.x+15 && tPos.y <= cPos.y+15);
+		return (tPos.x >= cPos.x-15 && tPos.y >= cPos.y-15 && tPos.x <= cPos.x+14 && tPos.y <= cPos.y+14);
 	}
 	
 	public static String optimizeText(String text) {

@@ -46,7 +46,7 @@ public class Engine implements Runnable {
 	public static ZoneManager zones;
 	public static GroundItemManager groundItems;
 	
-	public static final Position HOME = new Position(3190, 3421, 0);//new Position(3222, 3217, 0);//new Position(3164, 3487, 0);
+	public static final Position HOME = new Position(3190, 3421, 0);
 	
 	public Engine(int port, int worldId) {
 		try {
@@ -108,8 +108,7 @@ public class Engine implements Runnable {
 			
 			if(curTime-lastUpdate >= 600) {
 				
-				Player[] playerList = new Player[players.getPlayerList().size()];
-				playerList = players.getPlayerList().toArray(playerList);
+				Player[] playerList = players.getPlayerList();
 				NPC[] npcList = npcs.getNPCList();
 				
 				/* Process all extra content first */
@@ -123,7 +122,7 @@ public class Engine implements Runnable {
 					}
 				}
 				
-				/* Update all Players first */
+				/* Then process NPC updates */
 				for(NPC n:npcList) {
 					if(n != null) {
 						n.processEntity(tickCount);
@@ -132,9 +131,9 @@ public class Engine implements Runnable {
 				
 				/* Queue Client Sync packets to be sent */
 				for(Player p:playerList) {
-					if(p != null && p.online) {
+					if(p != null && p.online && p.isConnected()) {
 						p.sendPacket(new ClientSyncPlayers(p));
-						//p.sendPacket(new ClientSyncNPCs(p));
+						p.sendPacket(new ClientSyncNPCs(p));
 					}
 				}
 				
@@ -149,7 +148,7 @@ public class Engine implements Runnable {
 								try {
 									packet.sendPacket(p.getClient().getSocket());
 								} catch (IOException e) {
-									System.err.println("Error sending packet "+packet.getPacketId()+" to "+p.getClient()+"! Disconnecting user...");
+									System.err.println("Error sending packet "+packet.getPacketId()+" to "+p.getClient()+"!");
 									p.disconnect();
 									continue;
 								}
@@ -158,13 +157,13 @@ public class Engine implements Runnable {
 							}
 						} catch(ConcurrentModificationException cme) {
 							p.disconnect();
-							removePlayer(p.getWorldIndex());
+							players.removePlayer(p);
 							continue;
 						}
 						
 						if(!p.isConnected()) {
 							p.getClient().getSocket().close();
-							removePlayer(p.getWorldIndex());
+							players.removePlayer(p);
 						}
 						
 						p.resetFlags();
@@ -193,16 +192,8 @@ public class Engine implements Runnable {
 		return worldId;
 	}
 	
-	public static Player getPlayer(int Id) {
-		return players.getPlayerFromLocalId(Id);
-	}
-	
 	public static NPC getNPC(int Id) {
 		return npcs.getNPC(Id);
-	}
-	
-	public static void removePlayer(int index) {
-		players.removePlayer(index);
 	}
 	
 	public int getPort() {

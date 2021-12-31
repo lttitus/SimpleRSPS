@@ -20,10 +20,8 @@ public class PlayerManager {
 	
 	private MessageDigest md;
 	private Connection sql;
-	/* Contains Player UUIDs; Will make Player Tokenization possible */
-	private String[] playerUUIDs = new String[2048];
-	/* Stores Players by UUID */
-	private HashMap<String, Player> playerList = new HashMap<String, Player>();
+
+	private Player[] playerList = new Player[2048];
 	
 	public PlayerManager(Connection sqlConnection) {
 		try {
@@ -34,11 +32,9 @@ public class PlayerManager {
 		}
 	}
 	
-	private int getNextSlot() {
-		for(int i=1;i<playerUUIDs.length;i++) {
-			if(playerUUIDs[i] == null) {
-				return i;
-			}
+	private int getNextFreeSlot() {
+		for(int slot=1;slot<playerList.length;slot++) {
+			if(playerList[slot] == null) return slot;
 		}
 		
 		return -1;
@@ -46,14 +42,37 @@ public class PlayerManager {
 	
 	public ArrayList<Player> getPlayersInArea(Entity e) {
 		ArrayList<Player> players = new ArrayList<Player>();
+		int numPlayers = 0;
 		
-		for(Player p:playerList.values()) {
-			if(Misc.withinDistance(e, p)) {
-				players.add(p);
+		for(Player p:playerList) {
+			if(numPlayers == 255) break; 
+			
+			if(p != null) {
+				if(Misc.withinDistance(e, p)) {
+					players.add(p);
+					numPlayers++;
+				}
 			}
 		}
 		
 		return players;
+	}
+	
+	public Player findPlayerByUUID(String uuid) {
+		for(int slot=0;slot<playerList.length;slot++) {
+			Player p = playerList[slot];
+			if(p != null) {
+				if(p.getUUID().equalsIgnoreCase(uuid)) {
+					return playerList[slot];
+				}
+			}
+		}
+		
+		return null;
+	}
+	
+	public Player getPlayer(int worldId) {
+		return this.playerList[worldId];
 	}
 	
 	public LoginResult login(Client c, String username, String password) {
@@ -68,12 +87,13 @@ public class PlayerManager {
 					String uuid = result.getString("uuid");
 					
 					if(uuid != null) {
-						Player existingPlayer = Engine.players.getPlayerFromUUID(uuid);
+						Player existingPlayer = findPlayerByUUID(uuid);
+						
 						if(existingPlayer == null) {
 							String passhash = Misc.getHexDump(md.digest(password.getBytes()));
 							
 							if(passhash.equals(result.getString("passhash"))) {
-								int id = getNextSlot();
+								int id = getNextFreeSlot();
 								int rights = result.getInt("rights");
 								String rawXP = result.getString("stat_xp");
 								int absx = result.getInt("absx");
@@ -97,8 +117,7 @@ public class PlayerManager {
 									Player p = new Player(c, id, username, uuid, rights, rawXP, new Position(absx, absy, 0));
 									System.out.println("Player "+username+" logged in successfully!");
 									
-									playerUUIDs[id] = uuid;
-									playerList.put(uuid, p);
+									playerList[id] = p;
 									
 									return new LoginResult(LoginResult.SUCCESS, p);
 								}
@@ -108,21 +127,7 @@ public class PlayerManager {
 						}else {	//Already logged in
 							return new LoginResult(LoginResult.ALREADY_LOGGED_IN, existingPlayer);	//TODO: Pass this back and maybe use it for re-logging (packet 18, etc)
 						}
-					}/*else {	//Generate one and save it
-						uuid = generateUUID(System.currentTimeMillis(), c.getSocket().getAddress().getHostAddress(), username, password);
-						
-						PreparedStatement updateuuid = sql.prepareStatement("UPDATE players SET uuid=? WHERE username=?");
-						updateuuid.setString(1, uuid);
-						updateuuid.setString(2, username);
-						
-						try {
-							updateuuid.execute();
-							return login(c, username, password);	//Try again
-						} catch(SQLException e) {
-							System.err.println("Unable to save UUID to "+username+"!");
-							return new LoginResult(11, null);
-						}
-					}*/
+					}
 				}else {
 					System.err.println("Player does not exist; Creating one now...");
 					if(createPlayer(c, username, password)) {
@@ -145,6 +150,17 @@ public class PlayerManager {
 		return null;
 	}
 	
+	public int removePlayer(Player p) {
+		for(int slot=0;slot<playerList.length;slot++) {
+			if(playerList[slot] == p) {
+				playerList[slot] = null;
+				return slot;
+			}
+		}
+		
+		return -1;
+	}
+	
 	private String generateUUID(Object... data) {
 		StringBuilder sb = new StringBuilder();
 		
@@ -157,13 +173,11 @@ public class PlayerManager {
 	}
 	
 	public boolean createPlayer(Client c, String username, String password) {
-		//String uuid = generateUUID(System.currentTimeMillis(), c.getSocket().getAddress().getHostAddress(), username, password);
 		String passhash = Misc.getHexDump(md.digest(password.getBytes()));
 		String connectip = c.getSocket().getAddress().getCanonicalHostName();
 		
 		try {
 			PreparedStatement create = sql.prepareStatement("INSERT INTO players (username, passhash, lastconnectip, lastconnecttime) VALUES (?, ?, ?, ?)");
-			//create.setString(1, uuid);
 			create.setString(1, username);
 			create.setString(2, passhash);
 			create.setString(3, connectip);
@@ -196,7 +210,6 @@ public class PlayerManager {
 		int absy = pPos.y;
 		String uuid = p.getUUID();
 		String skills = getSkillString(p.getAllLevels(), p.getAllXP());
-		//System.out.println(skills.length());
 		
 		if(skills.length() == 216) {	//Length in 4-bit chars this string will need to be to be complete
 			try {
@@ -216,31 +229,14 @@ public class PlayerManager {
 				}
 			} catch(SQLException e) {
 				e.printStackTrace();
-				//System.err.println("Unable to save UUID to "+username+"!");
-				//return new LoginResult(11, null);
 			}
 		}
 		
 		return false;
 	}
 	
-	public Collection<Player> getPlayerList() {
-		return this.playerList.values();
-	}
-	
-	public void removePlayer(int index) {
-		String uuid = this.playerUUIDs[index];
-		this.playerUUIDs[index] = null;
-		this.playerList.remove(uuid);
-	}
-
-	public Player getPlayerFromUUID(String uuid) {
-		return playerList.get(uuid);
-	}
-	
-	public Player getPlayerFromLocalId(int localId) {
-		return getPlayerFromUUID(
-				playerUUIDs[localId]);
+	public Player[] getPlayerList() {
+		return this.playerList;
 	}
 
 }

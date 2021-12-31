@@ -5,6 +5,7 @@ import java.util.ArrayList;
 
 import org.mightykill.rsps.Engine;
 import org.mightykill.rsps.actions.Action;
+import org.mightykill.rsps.actions.DisappearAction;
 import org.mightykill.rsps.actions.RespawnAction;
 import org.mightykill.rsps.entities.combat.Combat;
 import org.mightykill.rsps.entities.combat.Hit;
@@ -53,8 +54,10 @@ public abstract class Entity {
 	
 	protected GEOffer[] geOffers = new GEOffer[6];
 	
+	private boolean visible = true;
+	
 	public Entity(Position pos) {
-		this.movement.setPosition(pos/*, this*/);
+		this.movement.setPosition(pos);
 		
 		for(int i=0;i<24;i++) {
 			skillLevel[i] = 1;
@@ -78,6 +81,20 @@ public abstract class Entity {
 		if(this instanceof Player) {
 			((Player)this).sendPacket(new UpdateGEOffer(slot, 0, 0, 0, 0, 0, 0));	//Remove the offer from the interface, if we are a Player
 		}
+	}
+	
+	public void hide() {
+		this.visible = false;
+		this.appearanceUpdated = true;
+	}
+	
+	public void show() {
+		this.visible = true;
+		this.appearanceUpdated = true;
+	}
+	
+	public boolean isHidden() {
+		return !this.visible;
 	}
 	
 	/**
@@ -294,11 +311,13 @@ public abstract class Entity {
 	
 	private int deathAnim = 7185;
 	public void die(long deathTick) {
-		living = false;
-		this.combat.setAttacking(null);
-		this.setAnimation(deathAnim, 0);
-		this.queueAction(new RespawnAction(this, deathTick, getRespawnTime()));
-		appearanceUpdated = true;
+		if(living) {	//TODO: Overhaul combat and death mechanics
+			living = false;
+			this.combat.setAttacking(null);
+			this.setAnimation(deathAnim, 0);
+			this.queueAction(new DisappearAction(this, deathTick, 5));
+			this.queueAction(new RespawnAction(this, deathTick, 5+getRespawnTime()));
+		}
 	}
 	
 	protected abstract long getRespawnTime();

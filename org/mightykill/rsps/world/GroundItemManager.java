@@ -123,30 +123,34 @@ public class GroundItemManager {
 	 * @param item The Item to create
 	 */
 	public void sendItemToSurroundingPlayers(GroundItem item) {
-		Collection<Player> allPlayers = Engine.players.getPlayerList();
-		allPlayers.remove(item.getOwner());
+		/*Collection<Player>*/Player[] allPlayers = Engine.players.getPlayerList();
+		//allPlayers.remove(item.getOwner());
 		
 		for(Player p:allPlayers) {
-			Position iPos = item.getPosition();
-			Position pPos = p.getPosition();
-			
-			if(pPos.x >= iPos.x-32 && pPos.y >= iPos.y-32 &&
-				pPos.x <= iPos.x+32 && pPos.y <= iPos.y+32) {
-				sendItemToPlayer(p, item);
+			if(p != null && item.getOwner() != p) {
+				Position iPos = item.getPosition();
+				Position pPos = p.getPosition();
+				
+				if(pPos.x >= iPos.x-32 && pPos.y >= iPos.y-32 &&
+					pPos.x <= iPos.x+32 && pPos.y <= iPos.y+32) {
+					sendItemToPlayer(p, item);
+				}
 			}
 		}
 	}
 	
 	public void destroyItemForSurroundingPlayers(GroundItem item) {
-		Collection<Player> allPlayers = Engine.players.getPlayerList();
+		Player[] allPlayers = Engine.players.getPlayerList();
 		
 		for(Player p:allPlayers) {
-			Position iPos = item.getPosition();
-			Position pPos = p.getPosition();
-			
-			if(pPos.x >= iPos.x-32 && pPos.y >= iPos.y-32 &&
-				pPos.x <= iPos.x+32 && pPos.y <= iPos.y+32) {
-				destroyItemForPlayer(p, item);
+			if(p != null) {
+				Position iPos = item.getPosition();
+				Position pPos = p.getPosition();
+				
+				if(pPos.x >= iPos.x-32 && pPos.y >= iPos.y-32 &&
+					pPos.x <= iPos.x+32 && pPos.y <= iPos.y+32) {
+					destroyItemForPlayer(p, item);
+				}
 			}
 		}
 	}

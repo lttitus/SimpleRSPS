@@ -29,7 +29,7 @@ public class ActionButton extends IncomingPacket {
 			packetId == 232) buttonId2 = nextUnsignedShort();
 		
 		p.idleCount = 0;
-		System.out.println("Interface: "+interfaceId+"; Button: "+buttonId+"; Button2: "+buttonId2);
+		p.debug("Interface: "+interfaceId+"; Button: "+buttonId+"; Button2: "+buttonId2);
 	
 		switch(interfaceId) {
 		case 89:	//Attack style tabs

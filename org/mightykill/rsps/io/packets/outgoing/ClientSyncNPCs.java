@@ -1,19 +1,17 @@
 package org.mightykill.rsps.io.packets.outgoing;
 
-import java.awt.Point;
 import java.util.ArrayList;
 
 import org.mightykill.rsps.Engine;
 import org.mightykill.rsps.entities.Entity;
 import org.mightykill.rsps.entities.combat.Hit;
 import org.mightykill.rsps.entities.movement.Movement;
+import org.mightykill.rsps.entities.movement.Position;
 import org.mightykill.rsps.entities.npc.NPC;
-import org.mightykill.rsps.entities.npc.NPCManager;
 import org.mightykill.rsps.entities.player.Player;
 import org.mightykill.rsps.entities.skills.Skill;
 import org.mightykill.rsps.io.packets.BitPacker;
 import org.mightykill.rsps.util.Misc;
-import org.mightykill.rsps.world.regions.Region;
 
 public class ClientSyncNPCs extends OutgoingPacket {
 	
@@ -22,94 +20,80 @@ public class ClientSyncNPCs extends OutgoingPacket {
 		
 		BitPacker pack = new BitPacker();
 		RawPacket updateBlock = new RawPacket();
+		Position pPos = p.getPosition();
 		
-		/* External Player Movement updates */
-		ArrayList<NPC> localNPCs = Engine.npcs.getNPCsInArea(p);//Engine.regions.getNPCsInArea(regionPoint.x, regionPoint.y);	//All nearby NPCs, within a 3x3 Region area
-		ArrayList<NPC> difference = Misc.getRemovingNPCs(p.localNPCs, localNPCs);	//List players that were previously updated, but no longer will be. Disconnected, teleported, moved out of region, etc...
-		p.localNPCs = (ArrayList<NPC>) localNPCs.clone();
-		localNPCs.addAll(difference);
-		
-		ArrayList<NPC> seenNPCList = new ArrayList<NPC>();		//We have updated these players before
-		ArrayList<NPC> unseenNPCList = new ArrayList<NPC>();	//Client is not aware of these players yet
-		
-		for(NPC n:localNPCs) {
-			if(difference.contains(n) || n.getMovement().teleported) continue;	//Ignore Players that are being removed
-			int id = n.getWorldIndex();
-			if(!p.seenNPC[id]) {
-				unseenNPCList.add(n);
-				p.seenNPC[id] = true;	//"See" them for the next iteration
-				n.appearanceUpdated = true;
-			}else {
-				seenNPCList.add(n);
-			}
+		//Update known NPCs first
+		ArrayList<NPC> knownNPCs = p.getSeenNPCs();
+		pack.addBits(8, knownNPCs.size());
+		for(NPC other:knownNPCs) {	//Max surrounding NPC count is capped at 255 (8 bits sent above)
+			if(other != null) {
+				Movement oMove = other.getMovement();
+				boolean withinDistance = Misc.withinDistance(p, other);
+				
+				if(other.appearanceUpdated ||	//An update occurred
+					oMove.walkDir != -1    ||
+					oMove.runDir != -1     ||
+					oMove.teleported ||
+					!withinDistance) {
+					pack.addBits(1, 1);
+					
+					if(withinDistance && !other.isHidden()) {
+						if(oMove.walkDir != -1) {
+							if(oMove.runDir != -1) {	//We covered 2 tiles this tick (we did a run)
+								pack.addBits(2, 2);
+								
+								pack.addBits(3, oMove.walkDir);
+								pack.addBits(3, oMove.runDir);
+								pack.addBits(1, other.appearanceUpdated?1:0);
+							}else {	//Only walking one tile
+								pack.addBits(2, 1);
+								
+								pack.addBits(3, oMove.walkDir);
+								pack.addBits(1, other.appearanceUpdated?1:0);
+							}
+						}else {	//No movement update
+							pack.addBits(2, 0);
+						}
+					}else {	//Remove this NPC from the client's update loop
+						pack.addBits(2, 3);
+						p.forgetNPC(other);
+					}
+				}else {	//No update at all
+					pack.addBits(1, 0);
+				}
+			}	//Continue on, as there is not a NPC at this position
 		}
-		p.debug("Previous Local: "+p.localNPCs.size()+"; New Local: "+localNPCs.size()+"; Difference: "+difference.size()+"; Seen: "+seenNPCList.size()+"; Unseen: "+unseenNPCList.size());
 		
-		/* Update known players */
-		pack.addBits(8, seenNPCList.size());
-		for(NPC n:seenNPCList) {
-			Movement nMove = n.getMovement();
-			boolean removed = difference.contains(n);
-			if(n.appearanceUpdated  ||
-				nMove.walkDir != -1 ||
-				nMove.runDir != -1  ||
-				nMove.teleported    ||
-				removed) {
+		//Add new NPC(s) to the client's update loop
+		ArrayList<NPC> localNPCs = Engine.npcs.getNPCsInArea(p);
+		for(NPC localNPC:localNPCs) {
+			boolean known = knownNPCs.contains(localNPC);
+			
+			if(!known && !localNPC.isHidden() && p.seeNPC(localNPC)) {	//If we don't know the NPC and we can see them (not too many people around us), add them to the Client and the Server Entity
+				pack.addBits(15, localNPC.getWorldIndex());
+				pack.addBits(14, localNPC.getNPCId());
+				pack.addBits(1, localNPC.appearanceUpdated?1:0);
+				
+				Position newNPCPos = localNPC.getPosition();
+				int xDiff = newNPCPos.x - pPos.x;
+				if(xDiff < 0) xDiff += 32;
+				int yDiff = newNPCPos.y - pPos.y;
+				if(yDiff < 0) yDiff += 32;
+				
+				pack.addBits(5, yDiff);
+				pack.addBits(5, xDiff);
+				pack.addBits(3, localNPC.getMovement().getCurrentDirection());
 				pack.addBits(1, 1);
 				
-				if(!removed) {
-					if(nMove.walkDir != -1) {
-						if(nMove.runDir != -1) {	//Running
-							pack.addBits(2, 2);
-
-							pack.addBits(3, nMove.walkDir);
-							pack.addBits(3, nMove.runDir);
-							pack.addBits(1, n.appearanceUpdated?1:0);
-						}else {	//Walking
-							pack.addBits(2, 1);
-							
-							pack.addBits(3, nMove.walkDir);
-							pack.addBits(1, n.appearanceUpdated?1:0);
-						}
-					}else {	//No movement change
-						pack.addBits(2, 0);
-					}
-				}else {	//Remove from client's update list
-					p.debug("Removing "+n.getName()+" "+n.getWorldIndex());
-					pack.addBits(2, 3);
-				}
-			}else {	//No update at all
-				pack.addBits(1, 0);
-			}
+				
+				knownNPCs.add(localNPC);
+			}	//If we found the NPC in the list, that means we know of them already; ignore them
 		}
 		
-		/* Add New NPC to Client Update List */
-		for(NPC n:unseenNPCList) {
-			pack.addBits(15, n.getWorldIndex());
-			pack.addBits(14, n.getNPCId());
-			pack.addBits(1, n.appearanceUpdated?1:0);
-			
-			int yPos = n.getPosition().y - p.getPosition().y;
-	        if (yPos < 0) yPos += 32;
-	        int xPos = n.getPosition().x - p.getPosition().x;
-	        if (xPos < 0) xPos += 32;
-	        
-	        pack.addBits(5, yPos);
-			pack.addBits(5, xPos);
-			pack.addBits(3, n.getMovement().getCurrentDirection());
-			pack.addBits(1, 1);
-		}
-		
-		/* Update required external players */
-		for(NPC n:localNPCs) {
-			if(difference.contains(n) || n.getMovement().teleported) {	//If we removed them, 'un-see' that player so they may be added later
-				int id = n.getWorldIndex();
-				//p.localNPCs.remove(n);
-				p.seenNPC[id] = false;
-				continue;
+		for(NPC knownNPC:knownNPCs) {
+			if(knownNPC.appearanceUpdated && !knownNPC.isHidden()) {
+				appendUpdateBlock(knownNPC, updateBlock);
 			}
-			
-			if(n.appearanceUpdated) appendUpdateBlock(n, updateBlock);
 		}
 		
 		/* Build the packet */
@@ -166,7 +150,10 @@ public class ClientSyncNPCs extends OutgoingPacket {
 	private void sendFaceTo(Entity e, OutgoingPacket pack) {
 		int id = -1;
 		if(e != null) {
-			id = e.getWorldIndex()+32768;
+			id = e.getWorldIndex();
+			if(e instanceof NPC) {
+				id |= 0x8000;
+			}
 		}
 		pack.addShort(id);
 	}

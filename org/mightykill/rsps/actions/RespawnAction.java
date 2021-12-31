@@ -21,21 +21,23 @@ public class RespawnAction extends TimedAction {
 		if(respawning instanceof Player) {
 			respawning.teleport(Engine.HOME/*, respawning*/);
 			respawning.setLevel(Skill.HITPOINTS, respawning.getLevelForXP(Skill.HITPOINTS));
+			((Player) respawning).sendMessage("Oh dear you are dead!");
 		}else {
 			NPC n = (NPC)respawning;
 			if(n.doesRespawn()) {
 				respawning.teleport(n.getRespawnPoint());
 				n.setLevel(Skill.HITPOINTS, n.getInitialSkillLevel(Skill.HITPOINTS));
+				
 			}
 		}
 		
-		
+		respawning.show();
 	}
 
 	public void postAction(long curTick) {
 		//respawning.setAnimation(-1, 0);
 		
-		respawning.appearanceUpdated = true;
+		//respawning.appearanceUpdated = true;
 	}
 
 }

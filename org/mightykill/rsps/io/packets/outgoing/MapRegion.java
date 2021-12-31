@@ -14,7 +14,7 @@ public class MapRegion extends OutgoingPacket {
 		
 		Point chunk = p.getPosition().getCurrentChunk();
 		Point localPos = p.getMovement().getPosition().getLocalPosition();
-		System.out.println("Active Chunk: "+chunk.x+", "+chunk.y+"; Position: "+localPos.x+", "+localPos.y+", "+0);
+		p.debug("Active Chunk: "+chunk.x+", "+chunk.y+"; Position: "+localPos.x+", "+localPos.y+", "+0);
 		
 		addShortA(chunk.x);
 		addShortBigEndianA(localPos.y);

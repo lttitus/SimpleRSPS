@@ -2,7 +2,6 @@ package org.mightykill.rsps.entities.player;
 
 import java.awt.Point;
 import java.util.ArrayList;
-import java.util.Iterator;
 
 import org.mightykill.rsps.Engine;
 import org.mightykill.rsps.entities.Entity;
@@ -13,7 +12,6 @@ import org.mightykill.rsps.exchange.offers.BuyOffer;
 import org.mightykill.rsps.exchange.offers.GEOffer;
 import org.mightykill.rsps.interfaces.Interface;
 import org.mightykill.rsps.io.client.Client;
-import org.mightykill.rsps.io.packets.incoming.IncomingPacket;
 import org.mightykill.rsps.io.packets.outgoing.DisplayInterface;
 import org.mightykill.rsps.io.packets.outgoing.Logout;
 import org.mightykill.rsps.io.packets.outgoing.MapRegion;
@@ -26,7 +24,6 @@ import org.mightykill.rsps.io.packets.outgoing.SendMessage;
 import org.mightykill.rsps.io.packets.outgoing.SendSkill;
 import org.mightykill.rsps.io.packets.outgoing.ShowInterface;
 import org.mightykill.rsps.io.packets.outgoing.UpdateGEOffer;
-import org.mightykill.rsps.items.Item;
 import org.mightykill.rsps.world.zones.Zone;
 
 public class Player extends Entity {
@@ -47,17 +44,12 @@ public class Player extends Entity {
 	private int walkAnim = 0x333;
 	private int runAnim = 0x338;
 	
-	private int seenPlayerCount = 0;
-	private Player[] seenPlayers = new Player[255];	//The client can only 'see' 255 Entities of each type 
-	private int seenNPCCount = 0;
-	private NPC[] seenNPCs = new NPC[255];
-	/*public ArrayList<Player> localPlayers = new ArrayList<Player>();
-	public ArrayList<NPC> localNPCs = new ArrayList<NPC>();*/
+	private ArrayList<Player> seenPlayers = new ArrayList<Player>();
+	private ArrayList<NPC> seenNPCs = new ArrayList<NPC>();
 	
 	/* Update stuff */
 	public String chatMessage;
 	public int chatMessageEffects = 0;
-	//private int originRegionX = -1, originRegionY = -1;
 	public int pnpc = -1;
 	
 	/* Testing stuff */
@@ -70,16 +62,11 @@ public class Player extends Entity {
 	public boolean isPlayingMusic = false;
 	private int currentMusicId = -1;
 	
-	//private HUD displays;
-	
 	public Player(Client c, int _Id, String username, String uuid, int rights, String rawStats, Position pos) {
 		super(pos);
-		//movement.setDirection(1);	//North
 		
 		Point startRegion = getCurrentRegionPoint();
 		movement.setActiveChunk(startRegion);
-		/*originRegionX = startRegion.x;
-		originRegionY = startRegion.y;*/
 		
 		pLook[0] = 0;
 		pLook[1] = 10;
@@ -89,15 +76,10 @@ public class Player extends Entity {
 		pLook[5] = 36;
 		pLook[6] = 42;
 		
-		//displays = new HUD();
-		
-		this.appearanceUpdated = true;
-		
 		for(int i=0;i<color.length;i++) {
 			color[i] = _Id;
 		}
 		
-		//System.out.println("Constructing new Player ["+username+"]: "+_Id);
 		this._Id = _Id;
 		this.name = username;
 		this.client = c;
@@ -114,104 +96,32 @@ public class Player extends Entity {
 			this.skillLevel[skillId] = skillLevel;
 			this.skillXp[skillId] = xp;
 		}
-		//setLevel(Skill.HITPOINTS, 10);
 	}
 	
-	/* TODO: Move the local Entities methods to another file */
-	public Player[] getSeenPlayers() {
-		return this.seenPlayers;
+	public ArrayList<Player> getSeenPlayers() {
+		return (ArrayList<Player>) this.seenPlayers.clone();
 	}
 	
-	public NPC[] getSeenNPCs() {
-		return this.seenNPCs;
+	public boolean seePlayer(Player p) {
+		if(this.seenPlayers.size() == 255) return false;
+		return this.seenPlayers.add(p);
 	}
 	
-	public int getSeenPlayersCount() {
-		return this.seenPlayerCount;
+	public boolean forgetPlayer(Player p) {
+		return this.seenPlayers.remove(p);
 	}
 	
-	public int getSeenNPCsCount() {
-		return this.seenNPCCount;
+	public ArrayList<NPC> getSeenNPCs() {
+		return (ArrayList<NPC>) this.seenNPCs.clone();
 	}
 	
-	public int seePlayer(Player p) {
-		int slot = getNextFreeSeenPlayerSlot();
-		
-		if(slot != -1) {
-			sendMessage("Saw "+p.getName());
-			seenPlayers[slot] = p;
-			seenPlayerCount++;
-		}
-		
-		return slot;
+	public boolean seeNPC(NPC p) {
+		if(this.seenNPCs.size() == 255) return false;
+		return this.seenNPCs.add(p);
 	}
 	
-	public int seeNPC(NPC n) {
-		int slot = getNextFreeSeenNPCSlot();
-		
-		if(slot != -1) {
-			seenNPCs[slot] = n;
-			seenNPCCount++;
-		}
-		
-		return slot;
-	}
-	
-	public int getSeenPlayerIndex(Player p) {
-		for(int slot=0;slot<seenPlayers.length;slot++) {
-			if(seenPlayers[slot] == p) return slot;
-		}
-		
-		return -1;
-	}
-	
-	public int getSeenNPCIndex(NPC n) {
-		for(int slot=0;slot<seenPlayers.length;slot++) {
-			if(seenNPCs[slot] == n) return slot;
-		}
-		
-		return -1;
-	}
-	
-	public int forgetPlayer(Player p) {
-		int slot = getSeenPlayerIndex(p);
-		
-		if(slot != -1) {
-			sendMessage("Removing "+p.getName());
-			seenPlayers[slot] = null;
-			seenPlayerCount--;
-		}
-		
-		return slot;
-	}
-	
-	public int forgetNPC(NPC n) {
-		int slot = getSeenNPCIndex(n);
-		
-		if(slot != -1) {
-			seenNPCs[slot] = null;
-			seenNPCCount--;
-		}
-		
-		return slot;
-	}
-	
-	private int getNextFreeSeenPlayerSlot() {
-		if(seenPlayerCount == 255) return -1;	//Don't waste any CPU cycles if we already know we are full
-		for(int slot=0;slot<seenPlayers.length;slot++) {
-			if(seenPlayers[slot] == null) return slot;
-		}
-		
-		return -1;
-	}
-	
-	private int getNextFreeSeenNPCSlot() {
-		if(seenNPCCount == 255) return -1;
-		for(int slot=0;slot<seenNPCs.length;slot++) {
-			if(seenNPCs[slot] == null) return slot;
-		}
-		
-		return -1;
+	public boolean forgetNPC(NPC p) {
+		return this.seenNPCs.remove(p);
 	}
 	
 	public void toggleDebug() {
@@ -225,7 +135,6 @@ public class Player extends Entity {
 	public void refreshSkills() {
 		for(int skillId=0;skillId<24;skillId++) {
 			setLevel(skillId, skillLevel[skillId]);
-			//this.sendPacket(new SendSkill(this, skillId));
 		}
 	}
 	
@@ -233,9 +142,9 @@ public class Player extends Entity {
 		online = true;
 		giveItem(4151, 1);
 		client.setLoggedIn(true);
+		this.appearanceUpdated = true;
 		sendMessage("Welcome to SimpleRSPS!");
 		refreshSkills();
-		//setLevelByXP(Skill.HITPOINTS, 1171);
 	}
 	
 	private Interface currentInterface = null;
@@ -545,7 +454,7 @@ public class Player extends Entity {
 		this.client.sendPacket(new Logout());
 		this.connected = false;
 		this.client.setLoggedIn(false);
-		this.movement.getCurrentRegion().removeEntity(this);
+		//this.movement.getCurrentRegion().removeEntity(this);
 		if(combat.getAttacking() != null) combat.getAttacking().getCombat().removeAttacker(this);
 		if(!Engine.players.savePlayer(this)) {
 			System.err.println("Unable to save Player!");

@@ -15,10 +15,10 @@ public class FollowPlayer extends IncomingPacket {
 
 	public void handlePacket() {
 		int playerId = nextUnsignedShort();
-		Player followee = Engine.players.getPlayerFromLocalId(playerId);
+		/*Player followee = Engine.players.getPlayerFromLocalId(playerId);
 		
 		follower.faceEntity(followee);
-		follower.setIntent(new FollowIntent(follower, followee));
+		follower.setIntent(new FollowIntent(follower, followee));*/
 	}
 
 }

@@ -112,6 +112,19 @@ public class Command extends IncomingPacket {
 			}
 			break;
 			
+		case "hide":
+			if(p.getRights() >= 2) {
+				p.sendMessage("You are now hiding");
+				p.hide();
+			}
+			break;
+		case "show":
+			if(p.getRights() >= 2) {
+				p.sendMessage("You are now visible");
+				p.show();
+			}
+			break;
+			
 		case "debug":
 			if(p.getRights() >= 2) {
 				p.toggleDebug();
