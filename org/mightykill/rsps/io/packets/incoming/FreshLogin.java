@@ -89,7 +89,7 @@ public class FreshLogin extends IncomingPacket {
 						p.refreshInventory();
 						p.refreshEquipment();
 						
-						p.sendPacket(new PlayerOption("Attack", 1));
+						//p.sendPacket(new PlayerOption("Attack", 1));
 						p.sendPacket(new PlayerOption("Follow", 2));
 						p.sendPacket(new PlayerOption("Trade", 3));
 						
@@ -101,7 +101,7 @@ public class FreshLogin extends IncomingPacket {
 						
 						p.sendPacket(new FriendServer());
 						
-						p.sendConfig(173, p.getMovement().isRunning()?1:0);	//Running?
+						
 						
 						p.loggedIn();
 					}else {

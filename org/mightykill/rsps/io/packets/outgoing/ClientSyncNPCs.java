@@ -34,7 +34,7 @@ public class ClientSyncNPCs extends OutgoingPacket {
 					oMove.walkDir != -1    ||
 					oMove.runDir != -1     ||
 					oMove.teleported ||
-					!withinDistance) {
+					!withinDistance) {	//No longer within distance, need to be removed
 					pack.addBits(1, 1);
 					
 					if(withinDistance && !other.isHidden()) {

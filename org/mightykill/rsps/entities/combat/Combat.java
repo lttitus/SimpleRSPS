@@ -138,7 +138,6 @@ public class Combat {
 			int strengthBonus = 0;//e.equipmentBonus[10];	//The Strength bonus your equipment gives you
 			double effectiveStrength = (e.getSkillLevel(Skill.STRENGTH)/**Prayer.getPrayerBonus(e, 1)*/)+8;	//The base Strength bonus
 			maxDamage = (int)Math.floor(0.5+effectiveStrength*(strengthBonus+64)/640);	//TODO Add combat style bonuses
-			System.out.println(e.getName()+" max hit is "+maxDamage);
 			break;
 		case 1:	//Range
 			//e.sendMessage("Range");

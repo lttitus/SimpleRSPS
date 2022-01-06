@@ -33,7 +33,7 @@ public class PlayerManager {
 	}
 	
 	private int getNextFreeSlot() {
-		for(int slot=1;slot<playerList.length;slot++) {
+		for(int slot=1;slot<playerList.length;slot++) {	//Start at 1 because 0 isnt handled correctly
 			if(playerList[slot] == null) return slot;
 		}
 		
@@ -98,6 +98,12 @@ public class PlayerManager {
 								String rawXP = result.getString("stat_xp");
 								int absx = result.getInt("absx");
 								int absy = result.getInt("absy");
+								String rawRunData = result.getString("rundata");
+								String rawAppearance = result.getString("appearance");
+								int runDataHex = Integer.parseInt(rawRunData, 16);
+								System.out.println(""+runDataHex);
+								boolean running = (runDataHex >> 11) == 1;
+								int runEnergy = (runDataHex & 0x7FF);	//0-2047
 								
 								if(id != -1) {
 									String connectingIp = c.getSocket().getAddress().getCanonicalHostName();
@@ -114,7 +120,9 @@ public class PlayerManager {
 									}
 									
 									
-									Player p = new Player(c, id, username, uuid, rights, rawXP, new Position(absx, absy, 0));
+									Player p = new Player(c, id, username, uuid, rights, rawXP, new Position(absx, absy, 0), rawAppearance);
+									p.getMovement().setRun(running);
+									p.getMovement().setRunEnergy(runEnergy);
 									System.out.println("Player "+username+" logged in successfully!");
 									
 									playerList[id] = p;
@@ -204,21 +212,27 @@ public class PlayerManager {
 		return xp;
 	}
 	
+	private String getRunData(boolean running, int energy) {
+		return String.format("%03X", energy | (running?2048:0));
+	}
+	
 	public boolean savePlayer(Player p) {
 		Position pPos = p.getPosition();
 		int absx = pPos.x;	//TODO: Map location verification so we don't get stuck outside the map
 		int absy = pPos.y;
 		String uuid = p.getUUID();
 		String skills = getSkillString(p.getAllLevels(), p.getAllXP());
+		String rundata = getRunData(p.getMovement().isRunning(), p.getMovement().getEnergy());
 		
 		if(skills.length() == 216) {	//Length in 4-bit chars this string will need to be to be complete
 			try {
 				
-				PreparedStatement updateuser = sql.prepareStatement("UPDATE players SET stat_xp=?, absx=?, absy=? WHERE uuid=?");
+				PreparedStatement updateuser = sql.prepareStatement("UPDATE players SET stat_xp=?, absx=?, absy=?, rundata=? WHERE uuid=?");
 				updateuser.setString(1, skills);
 				updateuser.setInt(2, absx);
 				updateuser.setInt(3, absy);
-				updateuser.setString(4, uuid);
+				updateuser.setString(4, rundata);
+				updateuser.setString(5, uuid);
 			
 				if(!updateuser.execute()) {
 					System.out.println("Player "+p.getName()+" saved successfully");

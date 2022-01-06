@@ -16,11 +16,14 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Random;
 
+import org.mightykill.rsps.Engine;
 import org.mightykill.rsps.entities.Entity;
 import org.mightykill.rsps.entities.movement.Position;
 import org.mightykill.rsps.entities.npc.NPC;
 import org.mightykill.rsps.entities.player.Player;
 import org.mightykill.rsps.io.packets.incoming.ChatMessage;
+import org.mightykill.rsps.items.Container;
+import org.mightykill.rsps.items.Item;
 
 public class Misc {
     /**
@@ -76,6 +79,9 @@ public class Misc {
         't', 'u', 'v', 'w', 'x', 'y', 'z', '0', '1', '2', 
         '3', '4', '5', '6', '7', '8', '9'
     };
+    
+    public static final Container testItems = new Container(new Item[] {new Item(1, 1), new Item(2, 1), new Item(3, 1), new Item(4, 1), new Item(5, 1), new Item(6, 1), new Item(7, 1), new Item(8, 1), new Item(9, 1), new Item(10, 1)});
+    
     /**
      * Chat text arrays.
      */
@@ -220,57 +226,6 @@ public class Misc {
         int deltaY = coordY2 - coordY1;
         return ((int)Math.ceil(Math.sqrt(Math.pow(deltaX, 2) + Math.pow(deltaY, 2))));
     }
-    
-    /*public static int dist(Entity a, Entity b) {
-    	
-    	int dx = a.absX-b.absX;
-    	int dy = a.absY-b.absY;
-    	return (int)Math.ceil(Math.sqrt(dx*dx + dy*dy));
-    }*/
-    
-    /**
-	 * Finds the closest point between 2 Entities, given a distance to maintain.
-	 * @param a
-	 * @param b
-	 * @param distance Radius of the circle
-	 * @return
-	 */
-	/*public static Point getClosestPoint(Entity a, Entity b, int distance) {
-		int cx = Math.min(a.absX, b.absY);
-		int cy = Math.min(a.absX, b.absY);
-		int fx = Math.max(a.absX, b.absY);
-		int fy = Math.max(a.absX, b.absY);
-		
-		int vx = fx - cx;
-		int vy = fy - cy;
-		double magV = Math.sqrt((vx*vx) + (vy*vy));	//Square root of vx^2+vy^2
-		double ax = b.absX+a.absX/magV*distance;
-		double ay = b.absY+a.absY/magV*distance;
-		
-		return new Point((int)ax-1, (int)ay-1);
-	}*/
-	
-	/**
-	 * Checks to see if the Player is within a 12x12 Map Region Area of the Update
-	 * @param p The Player
-	 * @param up The Update
-	 * @return true if the Player is within the 12x12 area, false otherwise
-	 */
-	/*public static boolean withinUpdateDistance(Player p, Update up) {
-		Point pmapRegion = p.getMapRegion();
-		Point emapRegion = up.e.getMapRegion();
-		int emapX = emapRegion.x;
-		int emapY = emapRegion.y;
-		int pmapX = pmapRegion.x;
-		int pmapY = pmapRegion.y;
-		
-		if((pmapX <= emapX+6 && pmapX >= emapX-6) &&
-			(pmapY <= emapY+6 && pmapY >= emapY-6)) {	//If the Player is within a 12x12 Map Region Area of the Entity being updated
-			return true;
-		}
-		
-		return false;
-	}*/
 
     /*
      * @param range The range to randomize from.
@@ -856,7 +811,7 @@ public class Misc {
 		Position cPos = control.getPosition();	//Central position
 		Position tPos = test.getPosition();
 		
-		return (tPos.x >= cPos.x-15 && tPos.y >= cPos.y-15 && tPos.x <= cPos.x+14 && tPos.y <= cPos.y+14);
+		return (tPos.x >= cPos.x-15 && tPos.y >= cPos.y-15 && tPos.x <= cPos.x+15 && tPos.y <= cPos.y+15);
 	}
 	
 	public static String optimizeText(String text) {
@@ -876,4 +831,15 @@ public class Misc {
         }
         return new String(buf, 0, buf.length);
     }
+
+	public static Item[] getTestItems(int count) {
+		Item[] items = new Item[count];
+		
+		for(int i=0;i<count;i++) {
+			int itemId = Engine.random.nextInt(12000);
+			items[i] = new Item(itemId, 1);
+		}
+		
+		return items;
+	}
 }

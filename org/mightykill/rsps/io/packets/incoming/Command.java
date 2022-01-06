@@ -14,13 +14,16 @@ import org.mightykill.rsps.entities.skills.Skill;
 import org.mightykill.rsps.exchange.offers.BuyOffer;
 import org.mightykill.rsps.exchange.offers.SellOffer;
 import org.mightykill.rsps.io.packets.outgoing.CreateGroundItem;
+import org.mightykill.rsps.io.packets.outgoing.Logout;
 import org.mightykill.rsps.io.packets.outgoing.PlayMusic;
 import org.mightykill.rsps.io.packets.outgoing.PlaySound;
 import org.mightykill.rsps.io.packets.outgoing.SendInterfaceConfig;
+import org.mightykill.rsps.io.packets.outgoing.SendItems;
 import org.mightykill.rsps.io.packets.outgoing.ShowInterface;
 import org.mightykill.rsps.io.packets.outgoing.TestPacket;
 import org.mightykill.rsps.io.packets.outgoing.UpdateGEOffer;
 import org.mightykill.rsps.items.Item;
+import org.mightykill.rsps.util.Misc;
 import org.mightykill.rsps.world.regions.Region;
 import org.mightykill.rsps.world.zones.Zone;
 
@@ -60,6 +63,16 @@ public class Command extends IncomingPacket {
 					p.pnpc = -1;
 					p.appearanceUpdated = true;
 					p.sendMessage("Un-morphing...");
+				}
+			}
+			break;
+			
+		case "dcall":
+			if(p.getRights() >= 2) {
+				for(Player other:Engine.players.getPlayerList()) {
+					if(other != null) {
+						other.sendPacket(new Logout());
+					}
 				}
 			}
 			break;
@@ -108,7 +121,7 @@ public class Command extends IncomingPacket {
 			p.sendMessage("Reloaded "+Engine.npcs.loadNPCDefinitions()+" NPC Definitions");
 			p.sendMessage("Respawning "+Engine.npcs.loadNPCs()+" NPCs");
 			for(Player p:Engine.players.getPlayerList()) {
-				//p.localNPCs = .clear();
+				
 			}
 			break;
 			
@@ -132,6 +145,21 @@ public class Command extends IncomingPacket {
 			}
 			break;
 			
+		case "movenpc":
+			try {
+				int npcWorldId = Integer.parseInt(cmd[1]);
+				
+				NPC npc = Engine.npcs.getNPC(npcWorldId);
+				if(npc != null) {
+					npc.walkTo(p.getPosition().getCoords());
+				}
+			} catch(NumberFormatException nfe) {
+				p.sendMessage("<col=ab0000>Invalid format! Should be ::item [itemid] [amount]");
+			} catch(ArrayIndexOutOfBoundsException oobe) {
+				p.sendMessage("<col=ab0000>Invalid format! Should be ::item [itemid] [amount]");
+			}
+			break;
+			
 		case "levelup":
 			for(int i=0;i<24;i++) {
 				p.setLevelByXP(i, 13141200);
@@ -150,7 +178,9 @@ public class Command extends IncomingPacket {
 				int itemId = Integer.parseInt(cmd[1]);
 				int amount = Integer.parseInt(cmd[2]);
 				
-				p.giveItem(itemId, amount);
+				if(p.giveItem(itemId, amount) != amount) {
+					p.sendMessage("Could not add all of the items in your inventory");
+				}
 			} catch(NumberFormatException nfe) {
 				p.sendMessage("<col=ab0000>Invalid format! Should be ::item [itemid] [amount]");
 			} catch(ArrayIndexOutOfBoundsException oobe) {
@@ -311,9 +341,22 @@ public class Command extends IncomingPacket {
 			break;
 			
 		case "allconfig":
-			for(int i=0;i<2000;i++) {
-				p.sendConfig(i, i);
+			if(p.isDebug()) {
+				try {
+					int conf = Integer.parseInt(cmd[1]);
+					
+					p.testConfig(conf);
+				} catch(NumberFormatException nfe) {
+					for(int i=0;i<2000;i++) {
+						p.sendConfig(i, i);
+					}
+				} catch(ArrayIndexOutOfBoundsException oobe) {
+					p.sendMessage("<col=ab0000>Invalid format! Should be ::img [id]");
+				}
 			}
+			/*for(int i=0;i<2000;i++) {
+				p.sendConfig(i, i);
+			}*/
 			break;
 			
 		case "img":
@@ -382,18 +425,52 @@ public class Command extends IncomingPacket {
 			}
 			break;
 			
+		case "ifitems":
+			try {
+				int iface = Integer.parseInt(cmd[1]);
+				int child = Integer.parseInt(cmd[2]);
+				int type = Integer.parseInt(cmd[3]);
+				
+				p.sendPacket(new SendItems(iface, child, type, Misc.testItems));
+			
+			} catch(NumberFormatException nfe) {
+				p.sendMessage("<col=ab0000>Invalid format! Should be ::npc [npcid]");
+			} catch(ArrayIndexOutOfBoundsException oobe) {
+				p.sendMessage("<col=ab0000>Invalid format! Should be ::npc [npcid]");
+			}
+			break;
+			
+		case "tryifc":
+			try {
+				int iface = Integer.parseInt(cmd[1]);
+				int maxChildren = Integer.parseInt(cmd[2]);
+				int startChild = Integer.parseInt(cmd[3]);
+				int set = Integer.parseInt(cmd[4]);
+				
+				p.tryIFC(iface, maxChildren, startChild, set);
+				/*for(int child=0;child<children;child++) {
+					p.sendPacket(new SendInterfaceConfig(iface, child, set));
+				}*/
+			
+			} catch(NumberFormatException nfe) {
+				p.sendMessage("<col=ab0000>Invalid format! Should be ::npc [npcid]");
+			} catch(ArrayIndexOutOfBoundsException oobe) {
+				p.sendMessage("<col=ab0000>Invalid format! Should be ::npc [npcid]");
+			}
+			break;
+			
 		case "tryconf":
 			try {
-				int interfaceid = Integer.parseInt(cmd[1]);
+				int interfaceId = Integer.parseInt(cmd[1]);
 				int numchildren = Integer.parseInt(cmd[2]);
 				
-				p.sendPacket(new ShowInterface(interfaceid));
+				p.sendPacket(new ShowInterface(interfaceId));
 				for(int i=0;i<=256;i++) {
-				p.sendMessage("Trying conf "+i);
-				for(int child=0;child<=numchildren;child++) {
-					p.sendPacket(new SendInterfaceConfig(548, child, i));
+					p.sendMessage("Trying conf "+i);
+					for(int child=0;child<=numchildren;child++) {
+						p.sendPacket(new SendInterfaceConfig(interfaceId, child, i));
+					}
 				}
-			}
 			
 			} catch(NumberFormatException nfe) {
 				p.sendMessage("<col=ab0000>Invalid format! Should be ::anim [id]");
@@ -401,6 +478,24 @@ public class Command extends IncomingPacket {
 				p.sendMessage("<col=ab0000>Invalid format! Should be ::anim [id]");
 			}
 			
+			break;
+			
+		case "testif":
+			try {
+				int startId = Integer.parseInt(cmd[1]);
+				int max = Integer.parseInt(cmd[2]);
+				
+				p.testInterfaces(startId, max);
+			
+			} catch(NumberFormatException nfe) {
+				p.sendMessage("<col=ab0000>Invalid format! Should be ::anim [id]");
+			} catch(ArrayIndexOutOfBoundsException oobe) {
+				p.sendMessage("<col=ab0000>Invalid format! Should be ::anim [id]");
+			}
+			break;
+			
+		case "req":
+			p.sendMessage("asdf:assistreq:");
 			break;
 			
 		case "home":

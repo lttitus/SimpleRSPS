@@ -23,7 +23,7 @@ public class Movement {
 	private Point activeChunk;
 	//private ArrayList<Point> pathQueue = new ArrayList<Point>();
 	private boolean running = false;
-	private int runEnergy = 10000;
+	private int runEnergy = 0;
 	public boolean teleported = false;
 	public int walkDir = -1;
 	public int runDir = -1;
@@ -106,6 +106,7 @@ public class Movement {
 					newDir = runDir = stepIterator.next();
 					stepIterator.remove();
 					newPos = Movement.getCoordsFromDirection(newPos, runDir);
+					runEnergy--;
 				}
 			}
 			
@@ -210,6 +211,14 @@ public class Movement {
 		return new Point(
 				worldPosition.x >> 3,
 				worldPosition.y >> 3);
+	}
+
+	public void setRunEnergy(int energy) {
+		this.runEnergy = energy;
+	}
+	
+	public int getEnergy() {
+		return this.runEnergy;
 	}
 	
 	/*public void addPointsToQueue(ArrayList<Point> steps) {

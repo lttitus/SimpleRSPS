@@ -14,20 +14,26 @@ public class WorldList extends IncomingPacket {
 
 	public void handlePacket() {
 		
-		ClientSocket s = origin.getSocket();
+		/*ClientSocket s = origin.getSocket();
 		RawPacket response = new RawPacket(0, 21, true, false, false);
 		
 		//TODO: Fix this
-		//byte[] raw = s.readBytes(4);
-		int request = nextInt();//raw[3] << 24 | raw[2] << 16 | raw[1] << 8 | raw[0];
-		//System.out.println(request);
+		byte[] raw;
+		try {
+			raw = s.readBytes(4);
+		
+		int request = raw[3] << 24 | raw[2] << 16 | raw[1] << 8 | raw[0];
+		
+		System.out.println(request);
 		response.addByte(1);
 		response.addShort(1);
 		response.addShortBigEndian(0x80 + 3);	//Member's world + player count
 		response.addString("Big pp world");
 		response.addShort(65536);	//Test?
 		response.addShort(77);	//Flag I think
-		
+		} catch (IOException e) {
+			e.printStackTrace();
+		}*/
 		
 		/*if(request != 0) {	//Everything
 			
@@ -56,7 +62,7 @@ public class WorldList extends IncomingPacket {
 			response.addShort(256);	//Player count
 		}*/
 	
-		origin.sendPacket(response);
+		//origin.sendPacket(response);
 		
 		//s.close();
 	}

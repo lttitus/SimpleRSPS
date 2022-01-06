@@ -47,10 +47,10 @@ public class ExchangeInterface extends Interface {
 		this.screenId = screenId;
 		this.viewSlot = slot;
 		
-		update(p, -1);
+		update(p);
 	}
 	
-	public void update(Player p, long curTick) {
+	public void update(Player p) {
 		p.sendConfig(1109, itemId);
 		p.sendConfig(1110, quantity);
 		p.sendConfig(1111, amount);

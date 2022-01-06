@@ -1,14 +1,20 @@
 package org.mightykill.rsps.io.packets.incoming;
 
+import org.mightykill.rsps.Engine;
 import org.mightykill.rsps.entities.player.Player;
 import org.mightykill.rsps.exchange.ExchangeInterface;
 import org.mightykill.rsps.exchange.GrandExchange;
 import org.mightykill.rsps.exchange.offers.GEOffer;
+import org.mightykill.rsps.interfaces.BankInterface;
+import org.mightykill.rsps.interfaces.TradeInterface;
 import org.mightykill.rsps.io.packets.outgoing.Logout;
 import org.mightykill.rsps.io.packets.outgoing.PlaySound;
 import org.mightykill.rsps.io.packets.outgoing.SendConfig;
 import org.mightykill.rsps.io.packets.outgoing.SendInterfaceConfig;
 import org.mightykill.rsps.io.packets.outgoing.SendItems;
+import org.mightykill.rsps.items.Item;
+import org.mightykill.rsps.items.containers.Bank;
+import org.mightykill.rsps.items.containers.Inventory;
 
 public class ActionButton extends IncomingPacket {
 	
@@ -21,16 +27,17 @@ public class ActionButton extends IncomingPacket {
 
 	public void handlePacket() {
 		int interfaceId = nextUnsignedShort();
-		int buttonId = nextUnsignedShort();
+		int buttonId = nextSignedShort();
 		int buttonId2= -1;
 		if(packetId == 233 || 
 			packetId == 21 ||
 			packetId == 169 ||
-			packetId == 232) buttonId2 = nextUnsignedShort();
+			packetId == 232 || packetId == 214) buttonId2 = nextSignedShort();
 		
 		p.idleCount = 0;
-		p.debug("Interface: "+interfaceId+"; Button: "+buttonId+"; Button2: "+buttonId2);
-	
+		p.debug(packetId+" - Interface: "+interfaceId+"; Button: "+buttonId+"; Button2: "+buttonId2);
+		System.out.println(packetId+" - Interface: "+interfaceId+"; Button: "+buttonId+"; Button2: "+buttonId2);
+		
 		switch(interfaceId) {
 		case 89:	//Attack style tabs
 			if(buttonId == 10) {	//Special attack
@@ -156,7 +163,7 @@ public class ActionButton extends IncomingPacket {
 					}
 				}
 				
-				ei.update(p, -1);
+				ei.update(p);
 			}else {
 				p.sendMessage("You should not be seeing this message!");
 			}
@@ -192,6 +199,116 @@ public class ActionButton extends IncomingPacket {
 				p.testgeconf++;
 			}
 			break;
+		case 334:	//Trade accept screen
+			if(buttonId == 20) {
+				if(p.isTrading()) {
+					TradeInterface trade = (TradeInterface)p.getShownInterface();
+					
+					trade.accept(p);
+				}else {	//Log illegal action
+					
+				}
+			}else if(buttonId == 21) {
+				if(p.isTrading()) {
+					TradeInterface trade = (TradeInterface)p.getShownInterface();
+					
+					p.closeInterface();
+				}else {	//Log illegal action
+					
+				}
+			}
+			break;
+		case 335:	//Trade offer screen
+			if(p.isTrading()) {
+				TradeInterface trade = (TradeInterface)p.getShownInterface();
+				
+				if(buttonId == 12) {
+					p.closeInterface();
+				}else if(buttonId == 16) {
+					trade.accept(p);
+				}else if(buttonId == 18) {
+					p.closeInterface();
+				}else if(buttonId == 30) {	//Remove item
+					int slot = buttonId2;
+					Item removing = trade.getItem(slot);
+					int amount = 1;
+					if(packetId == 233) {
+						amount = 1;
+					}else if(packetId == 21) {
+						amount = 5;
+					}else if(packetId == 169) {
+						amount = 10;
+					}else if(packetId == 214) {
+						amount = removing.getItemAmount();
+					}
+					
+					if(removing != null) {
+						int removed = trade.removeItem(p, slot, amount);
+						int added = p.getInventory().addAmount(removing.getItemId(), removed, false);
+						
+						if(added > 0) {
+							p.debug("Removed "+removed+" from trade screen");
+							p.refreshInventory();
+							p.sendPacket(new SendItems(-1, 1, 93, p.getInventory()));
+						}else {
+							p.sendMessage("You do not have enough inventory space to remove this item.");	//How did they do this...?
+						}
+					}else {	//Log illegal action
+						p.sendMessage("You cannot remove what you didn't offer!");
+					}
+				}
+			}else {	//Log illegal action
+				p.closeInterface();
+			}
+			break;
+		case 336:	//Trade inventory side bar
+			if(p.isTrading()) {
+				TradeInterface trade = (TradeInterface)p.getShownInterface();
+				
+				if(buttonId == 0) {
+					int slot = buttonId2;
+					Item adding = p.getInventory().getItemInSlot(slot);
+					
+					if(adding != null) {
+						int amount = 1;
+						int maxAmount = adding.getItemAmount();
+						if(!Engine.items.getDefinition(adding.getItemId()).isStackable()) {
+							maxAmount = p.getInventory().getItemCount(adding.getItemId());
+						}
+						
+						if(packetId == 233) {
+							amount = 1;
+						}else if(packetId == 21) {
+							amount = 5;
+						}else if(packetId == 169) {
+							amount = 10;
+						}else if(packetId == 214) {
+							amount = maxAmount;
+						}
+						
+						if(amount > maxAmount) {
+							p.sendMessage("You do not have that many to give!");
+							amount = maxAmount;
+						}
+						
+						int added = trade.addItem(p, new Item(adding.getItemId(), amount));
+						if(added > 0) {
+							int removed = p.getInventory().removeAmount(adding.getItemId(), added);
+							
+							p.debug("Removed "+removed+" from inventory");
+							p.refreshInventory();
+							p.sendPacket(new SendItems(-1, 1, 93, p.getInventory()));
+						}else {
+							p.sendMessage("Trade screen is too full to add this item!");	//How did they do this...?
+						}
+					}else {
+						p.sendMessage("You cannot add what you don't have!");
+					}
+				}
+			}else {	//Log illegal action
+				p.closeInterface();
+			}
+			break;
 		case 389:	//Grand Exchange Search
 			if(buttonId == 10) {
 				p.closeChatboxInterface();
@@ -203,8 +320,80 @@ public class ActionButton extends IncomingPacket {
 				p.sendPacket(new SendConfig(173, p.getMovement().isRunning()?1:0));	//Sync Client screen to Server; prevents spamming
 			}
 			break;
+		case 762:	//Bank
+			if(buttonId == 22) {	//Close
+				p.closeInterface();
+			}else if(buttonId == 16) {
+				BankInterface bank = (BankInterface)p.getShownInterface();
+				
+				bank.setWithdrawalMode(!bank.willNote());
+			}
+			
+			if(p.isBanking()) {
+				BankInterface bank = (BankInterface)p.getShownInterface();
+				Bank pBank = p.getBank();
+				
+				int bankSlot = buttonId-73;
+				if(bankSlot >= 0) {
+					int availableAmount = pBank.getItemInSlot(bankSlot).getItemAmount();
+					int withdraw = 0;
+					
+					if(packetId == 233) {
+						withdraw = 1;
+					}else if(packetId == 21) {
+						withdraw = 5;
+					}else if(packetId == 169) {
+						withdraw = 10;
+					}else if(packetId == 232) {
+						withdraw = availableAmount;
+					}
+					
+					if(withdraw > availableAmount) {
+						withdraw = availableAmount;
+					}
+					
+					if(pBank.withdrawItem(p, bankSlot, withdraw, bank.willNote()) != withdraw) {
+						p.sendMessage("You do not have enough inventory space to withdraw that many.");
+					}
+					
+					bank.update(p);
+				}
+			}else {	//Log illegal action
+				
+			}
+			break;
+		case 763:	//Inventory when banking (deposit items)
+			if(p.isBanking()) {
+				BankInterface bank = (BankInterface)p.getShownInterface();
+				Bank pBank = p.getBank();
+				int availableAmount = p.getInventory().getItemInSlot(buttonId2).getItemAmount();
+				int deposit = 0;
+				
+				if(packetId == 233) {
+					deposit = 1;
+				}else if(packetId == 21) {
+					deposit = 5;
+				}else if(packetId == 169) {
+					deposit = 10;
+				}else if(packetId == 232) {
+					deposit = availableAmount;
+				}
+				
+				if(deposit > availableAmount) {
+					deposit = availableAmount;
+				}
+				
+				if(pBank.depositItem(p, buttonId2, deposit) != deposit) {
+					p.sendMessage("There is not enough room in your bank to store this item.");
+				}
+				
+				bank.update(p);
+			}else {	//Log illegal action
+				
+			}
+			break;
 		}
-	
+		
 	}
 
 }

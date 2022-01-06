@@ -7,6 +7,7 @@ import java.util.ArrayList;
 
 import org.mightykill.rsps.entities.player.Player;
 import org.mightykill.rsps.io.packets.PacketUtils;
+import org.mightykill.rsps.io.packets.incoming.AcceptTradeRequest;
 import org.mightykill.rsps.io.packets.incoming.ActionButton;
 import org.mightykill.rsps.io.packets.incoming.AttackNPC;
 import org.mightykill.rsps.io.packets.incoming.AttackPlayer;
@@ -27,6 +28,7 @@ import org.mightykill.rsps.io.packets.incoming.IdlePing;
 import org.mightykill.rsps.io.packets.incoming.IncomingPacket;
 import org.mightykill.rsps.io.packets.incoming.InitiateLogin;
 import org.mightykill.rsps.io.packets.incoming.ItemOnItem;
+import org.mightykill.rsps.io.packets.incoming.ItemSelect;
 import org.mightykill.rsps.io.packets.incoming.MouseEvent;
 import org.mightykill.rsps.io.packets.incoming.MusicPacket;
 import org.mightykill.rsps.io.packets.incoming.NPCSpeak;
@@ -35,8 +37,11 @@ import org.mightykill.rsps.io.packets.incoming.PingPacket;
 import org.mightykill.rsps.io.packets.incoming.QuickChat;
 import org.mightykill.rsps.io.packets.incoming.ReconnectSession;
 import org.mightykill.rsps.io.packets.incoming.RegionUpdate;
+import org.mightykill.rsps.io.packets.incoming.StringInput;
+import org.mightykill.rsps.io.packets.incoming.SwitchInterfaceItems;
 import org.mightykill.rsps.io.packets.incoming.SwitchItems;
 import org.mightykill.rsps.io.packets.incoming.TakeItem;
+import org.mightykill.rsps.io.packets.incoming.TradePlayer;
 import org.mightykill.rsps.io.packets.incoming.UnequipItem;
 import org.mightykill.rsps.io.packets.incoming.UpdateServer;
 import org.mightykill.rsps.io.packets.incoming.Walking;
@@ -113,11 +118,15 @@ public class Client {
 					case 37:
 						packet = new FollowPlayer(data, p);
 						break;
-					case 38:
-						packet = new ExamineItem(data, p);
+					case 38:	//Inventory examine
+					case 90:	//Bank examine
+						packet = new ExamineItem(packetId, data, p);
 						break;
 					case 40:
 						packet = new ItemOnItem(data, p);
+						break;
+					case 42:	//String input
+						packet = new StringInput(data, p);
 						break;
 					case 46:	//Object Interaction
 					case 94:
@@ -159,7 +168,11 @@ public class Client {
 					case 117:
 						packet = new PingPacket(packetId, data, this);
 						break;
+					case 21:
 					case 113:	//ActionButton
+					case 169:
+					case 214:
+					case 232:
 					case 233:
 						packet = new ActionButton(packetId, packetSize, data, p);
 						break;
@@ -171,6 +184,9 @@ public class Client {
 						break;
 					case 167:	//Switch Items
 						packet = new SwitchItems(data, p);
+						break;
+					case 179:	//Switch Items on an Interface, such as the bank
+						packet = new SwitchInterfaceItems(data, p);
 						break;
 					case 182:	//Reconnecting Session
 					case 183:
@@ -188,8 +204,14 @@ public class Client {
 					case 211:	//Drop Item
 						packet = new DropItem(data, p);
 						break;
+					case 220:
+						packet = new ItemSelect(data, p);
+						break;
 					case 222:	//Chat Message
 						packet = new ChatMessage(data, p);
+						break;
+					case 227:	//Player trade
+						packet = new TradePlayer(data, p);
 						break;
 					case 247:	//Music
 						packet = new MusicPacket(data, p);
@@ -199,6 +221,9 @@ public class Client {
 						break;
 					case 250:
 						packet = new QuickChat(data, this);
+						break;
+					case 253:	//Accept trade request from chat box
+						packet = new AcceptTradeRequest(data, p);
 						break;
 					case 255:
 						packet = new WorldList(data, this);

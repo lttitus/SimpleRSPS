@@ -6,6 +6,7 @@ import org.mightykill.rsps.Engine;
 import org.mightykill.rsps.entities.npc.NPC;
 import org.mightykill.rsps.entities.player.Player;
 import org.mightykill.rsps.exchange.GrandExchange;
+import org.mightykill.rsps.items.containers.Bank;
 
 public class ObjectInteraction extends IncomingPacket {
 	
@@ -29,7 +30,9 @@ public class ObjectInteraction extends IncomingPacket {
 			
 			switch(objid) {
 			case 24389:	//Knock on door thing
-				
+				NPC banker = Engine.npcs.getNPC(10);
+				banker.faceEntity(p);
+				banker.walkTo(new Point(3190, 3445));
 				break;
 			}
 			
@@ -42,6 +45,9 @@ public class ObjectInteraction extends IncomingPacket {
 			
 			if(objid == 28089) {	//GE Booth
 				GrandExchange.openOfferScreen(p);
+			}
+			if(objid == 11402) {	//Bank
+				p.openBank();
 			}
 			
 			break;

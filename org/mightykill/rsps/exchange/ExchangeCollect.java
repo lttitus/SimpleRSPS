@@ -20,7 +20,7 @@ public class ExchangeCollect extends Interface {
 	}
 
 	@Override
-	public void update(Player p, long curTick) {
+	public void update(Player p) {
 		// TODO Auto-generated method stub
 		
 	}

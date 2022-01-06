@@ -31,9 +31,9 @@ public class UnequipItem extends IncomingPacket {
 		
 		if(unequipItem != null) {
 			p.idleCount = 0;
-			if(!inventory.addItem(
+			if(inventory.addAmount(
 					itemId, 
-					unequipItem.getItemAmount())) {
+					unequipItem.getItemAmount(), false) <= 0) {
 				p.sendMessage("You do not have enough space in your inventory to remove this item.");
 			}else {
 				p.getEquipment().setItem(slot, null);

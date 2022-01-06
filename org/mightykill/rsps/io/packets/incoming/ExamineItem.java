@@ -7,8 +7,8 @@ public class ExamineItem extends IncomingPacket {
 	
 	private Player p;
 
-	public ExamineItem(byte[] data, Player origin) {
-		super(38, 2, data, origin.getClient());
+	public ExamineItem(int packetId, byte[] data, Player origin) {
+		super(packetId, 2, data, origin.getClient());
 		this.p = origin;
 	}
 

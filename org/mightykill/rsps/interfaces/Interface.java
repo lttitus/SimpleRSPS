@@ -4,7 +4,10 @@ import org.mightykill.rsps.entities.player.Player;
 
 public abstract class Interface {
 	
-	private int interfaceId, showId, windowId, location;
+	protected int interfaceId;
+	private int showId;
+	private int windowId;
+	private int location;
 	
 	public Interface(int interfaceId, int showId, int windowId, int location) {
 		this.interfaceId = interfaceId;
@@ -31,7 +34,7 @@ public abstract class Interface {
 	
 	public abstract void show(Player p);
 	
-	public abstract void update(Player p, long curTick);
+	public abstract void update(Player p);
 	
 	public abstract void close(Player p);
 

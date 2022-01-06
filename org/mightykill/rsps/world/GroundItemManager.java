@@ -60,7 +60,8 @@ public class GroundItemManager {
 		GroundItem existing = getItemAtPosition(owner, x, y, itemId);
 		
 		if(existing != null && Engine.items.getDefinition(itemId).isStackable()) {	//There is already an Item here we can add to
-			existing.addAmount(itemAmount);
+			//existing.addAmount(itemAmount);
+			existing.setAmount(itemAmount+existing.getItemAmount());
 			existing.resetTimer();
 		}else {
 			GroundItem gi = new GroundItem(itemId, itemAmount, x, y, owner);
@@ -77,7 +78,7 @@ public class GroundItemManager {
 	}
 	
 	public boolean takeItem(GroundItem item, Entity taker) {
-		return taker.giveItem(item.getItemId(), item.getItemAmount()) && destroyGroundItem(item);
+		return taker.giveItem(item.getItemId(), item.getItemAmount()) > 0 && destroyGroundItem(item);
 	}
 	
 	/**

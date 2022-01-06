@@ -29,6 +29,8 @@ public class EquipItem extends IncomingPacket {
 		Item equipItem = inventory.getItemInSlot(slot);
 		
 		if(equipItem != null) {
+			p.closeInterface();
+			
 			boolean is2h = Engine.items.getHandhelds(itemId).isTwoHand();
 			int targetSlot = Engine.items.getEquipment(itemId).getEquipSlot();
 			
@@ -42,7 +44,7 @@ public class EquipItem extends IncomingPacket {
 					Item otherItem = equipment.getItemInSlot(otherSlot);
 					
 					if(otherItem != null) {
-						if(!inventory.addItem(otherItem)) {
+						if(inventory.addAmount(otherItem, false) > 0) {
 							p.sendMessage("You don't have enough inventory space to wear this item.");
 							canWear = false;
 						}

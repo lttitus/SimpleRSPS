@@ -58,6 +58,8 @@ public class ClientSyncPlayers extends OutgoingPacket {
 						pack.addBits(3, pMove.walkDir);
 						pack.addBits(3, pMove.runDir);
 						pack.addBits(1, p.appearanceUpdated?1:0);
+						
+						p.sendPacket(new SendRunEnergy(p.getMovement().getEnergy()));
 					}else {	//Walking
 						pack.addBits(2, 1);
 						

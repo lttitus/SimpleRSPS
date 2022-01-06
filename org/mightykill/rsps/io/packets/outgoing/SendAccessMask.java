@@ -2,7 +2,15 @@ package org.mightykill.rsps.io.packets.outgoing;
 
 public class SendAccessMask extends OutgoingPacket {
 
-	public SendAccessMask(int set, int window, int interfaceId, int offset, int length) {
+	/**
+	 * 
+	 * @param set
+	 * @param window
+	 * @param interfaceId
+	 * @param offset
+	 * @param length
+	 */
+	public SendAccessMask(int length, int offset, int window, int interfaceId, int set, int last) {
 		super(223, 12);
 		
 		addShort(length);
@@ -10,7 +18,7 @@ public class SendAccessMask extends OutgoingPacket {
 		addShortBigEndian(window);
 		addShortBigEndian(interfaceId);
 		addShortBigEndian(set);
-		addShortBigEndian(0);
+		addShortBigEndian(last);
 	}
 
 }

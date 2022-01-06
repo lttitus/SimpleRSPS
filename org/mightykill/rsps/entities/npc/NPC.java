@@ -94,4 +94,12 @@ public class NPC extends Entity {
 		return respawnTimer;
 	}
 
+	public void initiateTrade(Entity tradee) {
+		System.out.println("Under construction");
+	}
+
+	public boolean isTrading() {
+		return false;
+	}
+
 }

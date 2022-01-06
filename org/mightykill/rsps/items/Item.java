@@ -6,12 +6,12 @@ public class Item {
 	
 	private int itemId;
 	private int itemAmount;
-	private ItemDefinition def;
+	//private ItemDefinition def;
 	
 	public Item(int itemId, int itemAmount) {
 		this.itemId = itemId;
 		this.itemAmount = itemAmount;
-		this.def = Engine.items.getDefinition(itemId);
+		//this.def = Engine.items.getDefinition(itemId);
 	}
 	
 	/**
@@ -19,8 +19,9 @@ public class Item {
 	 * @param amount
 	 * @return
 	 */
-	protected boolean setAmount(int amount) {
-		if(amount > 1) {
+	public void setAmount(int amount) {
+		this.itemAmount = amount;
+		/*if(amount > 1) {
 			if(!def.isStackable()) {
 				return false;
 			}else {
@@ -32,14 +33,26 @@ public class Item {
 			return true;
 		}else {	//Anything under 0 is illegal
 			return false;
+		}*/
+	}
+	
+	/*public int addAmount(int amount) {
+		int curAmount = itemAmount;
+		
+		if(curAmount >= 1) {
+			if(def.isStackable()) {
+				
+			}else {
+				return -1;	//Error
+			}
+		}else {
+			
 		}
+		
+		return 0;
 	}
-	
-	public boolean addAmount(int amount) {
-		return setAmount(this.itemAmount+amount);
-	}
-	
-	protected boolean removeAmount(int amount) {
+	*/
+	/*public void removeAmount(int amount) {
 		if(amount > 0) {
 			if(itemAmount >= amount) {
 				itemAmount -= amount;
@@ -48,7 +61,7 @@ public class Item {
 		}
 		
 		return false;
-	}
+	}*/
 	
 	public int getItemId() {
 		return this.itemId;
@@ -59,11 +72,15 @@ public class Item {
 	}
 	
 	public boolean isStackable() {
-		return this.def.isStackable();
+		return Engine.items.getDefinition(itemId).isStackable();
 	}
 	
-	public ItemDefinition getItemDef() {
-		return this.def;
+	public boolean isNoted() {
+		return Engine.items.getDefinition(itemId).isNoted();
 	}
+	
+	/*public ItemDefinition getItemDef() {
+		return this.def;
+	}*/
 
 }

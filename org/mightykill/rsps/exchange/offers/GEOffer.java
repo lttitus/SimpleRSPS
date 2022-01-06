@@ -109,7 +109,7 @@ public abstract class GEOffer {
 			//TODO: Check for enough inventory space
 			if(this.owner.giveItem(
 					isMoney?995:itemId,
-						coffers[cofferSlot])) {
+						coffers[cofferSlot]) > 0) {
 				this.coffers[cofferSlot] = 0;
 				if(owner instanceof Player) {
 					((Player)owner).playSound(4040);	//plop

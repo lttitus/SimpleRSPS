@@ -123,15 +123,15 @@ public class GrandExchange {
 					Inventory inv = p.getInventory();
 					
 					if(isBuy) {
-						Item money = inv.getItem(995);
-						
-						if(money != null) {
-							if(money.getItemAmount() >= ei.getAmount()) {
+						if(inv.hasAmount(995, ei.getAmount())) {
+							int removed = inv.removeAmount(995, ei.getAmount());
+							
+							if(removed == ei.getAmount()) {
 								Engine.ge.addOffer(new BuyOffer(p, ei.getViewSlot(), ei.getItemId(), ei.getQuantity(), ei.getAmount(), 1), ei.getViewSlot());
-								inv.removeAmount(money, ei.getAmount());
 								handled = true;
 							}else {
-								p.sendMessage("You don't have enough money to complete this offer.");
+								p.giveItem(995, removed);	//Refund
+								p.sendMessage("Removal mismatch "+removed+"; Refund approved");
 							}
 						}else {
 							p.sendMessage("You don't have enough money to complete this offer.");
@@ -142,9 +142,15 @@ public class GrandExchange {
 						
 						if(item != null) {
 							if(item.getItemAmount() >= ei.getAmount()) {
-								Engine.ge.addOffer(new SellOffer(p, ei.getViewSlot(), itemId, ei.getQuantity(), ei.getAmount(), 1), ei.getViewSlot());
-								inv.removeAmount(item, ei.getAmount());
-								handled = true;
+								int removed = inv.removeAmount(itemId, ei.getAmount());
+								
+								if(removed == ei.getAmount()) {
+									Engine.ge.addOffer(new SellOffer(p, ei.getViewSlot(), itemId, ei.getQuantity(), ei.getAmount(), 1), ei.getViewSlot());
+									handled = true;
+								}else {
+									p.giveItem(itemId, removed);	//Refund
+									p.sendMessage("Removal mismatch "+removed+"; Refund approved");
+								}
 							}
 						}
 					}
@@ -287,7 +293,7 @@ public class GrandExchange {
 	public static void updateOfferScreen(Player p, int itemId) {
 		p.closeChatboxInterface();
 		((ExchangeInterface)p.getShownInterface()).setItemId(itemId);
-		((ExchangeInterface)p.getShownInterface()).update(p, -1);
+		((ExchangeInterface)p.getShownInterface()).update(p);
 		//p.sendConfig(1109, itemId);
 	}
 

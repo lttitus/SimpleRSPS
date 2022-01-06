@@ -13,12 +13,15 @@ import org.mightykill.rsps.entities.movement.Movement;
 import org.mightykill.rsps.entities.movement.Position;
 import org.mightykill.rsps.entities.player.Player;
 import org.mightykill.rsps.entities.skills.Skill;
+import org.mightykill.rsps.entities.trade.TradeOffer;
 import org.mightykill.rsps.exchange.offers.GEOffer;
 import org.mightykill.rsps.intents.Intent;
 import org.mightykill.rsps.io.packets.outgoing.UpdateGEOffer;
 import org.mightykill.rsps.items.Item;
+import org.mightykill.rsps.items.containers.Bank;
 import org.mightykill.rsps.items.containers.Equipment;
 import org.mightykill.rsps.items.containers.Inventory;
+import org.mightykill.rsps.util.Misc;
 import org.mightykill.rsps.world.regions.Region;
 import org.mightykill.rsps.world.zones.Zone;
 
@@ -28,7 +31,6 @@ public abstract class Entity {
 	protected int _Id;
 	protected String name = "!UNDEFINED!";
 	
-	//public boolean updateFaceTo = false;
 	public boolean updateFaceCoords = false;
 	public boolean updateFaceEntity = false;
 	public Point facingCoords = null;
@@ -41,11 +43,10 @@ public abstract class Entity {
 	protected int[] skillXp = new int[24];
 	protected Inventory inventory;
 	protected Equipment equipment;
+	protected Bank bank;
 	protected Combat combat;
 	protected int combatLevel = 3;
 	protected int[] equipmentBonuses = new int[12];
-	
-	//protected boolean female = false;
 	
 	protected Movement movement = new Movement(this);
 	protected ArrayList<Action> actionQueue = new ArrayList<Action>();
@@ -53,6 +54,7 @@ public abstract class Entity {
 	protected Zone[] zones = new Zone[1];
 	
 	protected GEOffer[] geOffers = new GEOffer[6];
+	protected ArrayList<TradeOffer> tradeOffers = new ArrayList<TradeOffer>();
 	
 	private boolean visible = true;
 	
@@ -66,6 +68,7 @@ public abstract class Entity {
 		
 		inventory = new Inventory();
 		equipment = new Equipment();
+		bank = new Bank();
 		combat = new Combat(this);
 	}
 	
@@ -114,19 +117,15 @@ public abstract class Entity {
 	
 	public abstract void updateExchangeOffer(GEOffer offer, boolean notify);
 	
-	public boolean giveItem(Item item) {
-		boolean couldAdd = this.inventory.addItem(item);
-		
-		if(!couldAdd) {
-			if(this instanceof Player) ((Player)this).sendMessage("<col=ab0000>You do not have enough space in your inventory to hold this item.");
-		}else {
-			if(this instanceof Player) ((Player)this).refreshInventory();
+	public int giveItem(Item item) {
+		int given = inventory.addAmount(item, false);
+		if(this instanceof Player) {
+			((Player)this).refreshInventory();
 		}
-		
-		return couldAdd;
+		return given;
 	}
 	
-	public boolean giveItem(int itemId, int amount) {
+	public int giveItem(int itemId, int amount) {
 		return giveItem(new Item(itemId, amount));
 	}
 	
@@ -137,6 +136,9 @@ public abstract class Entity {
 	public Point getCurrentRegionPoint() {
 		return this.movement.getCurrentRegionPoint();
 	}
+	
+	public abstract void initiateTrade(Entity tradee);
+	public abstract boolean isTrading();
 	
 	public void processEntity(long curTick) {
 		if(!living) {
@@ -151,6 +153,15 @@ public abstract class Entity {
 		
 		zones = Engine.zones.getApplicableZones(this).toArray(zones);
 		
+		/* Age trade offers, removing if any are > 1 minute old */
+		TradeOffer[] offers = new TradeOffer[tradeOffers.size()];
+		offers = tradeOffers.toArray(offers);
+		for(TradeOffer offer:offers) {
+			if(offer.age() <= 0) {
+				tradeOffers.remove(offer);
+			}
+		}
+		
 		Action[] actionList = new Action[actionQueue.size()];
 		actionList = actionQueue.toArray(actionList);
 		for(Action action:actionList) {
@@ -164,6 +175,10 @@ public abstract class Entity {
 				currentIntent.finishIntent();
 				currentIntent = null;
 			}
+		}
+		
+		if(movement.getEnergy() < 0x7FF) {	//Max energy
+			movement.setRunEnergy(movement.getEnergy()+1);
 		}
 		
 		process(curTick);

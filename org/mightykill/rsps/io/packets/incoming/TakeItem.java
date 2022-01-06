@@ -34,10 +34,12 @@ public class TakeItem extends IncomingPacket {
 				GroundItem groundItem = Engine.groundItems.getItemAtPosition(p, x, y, id);
 
 				if(groundItem != null) {
-					if(p.giveItem(groundItem)) {
+					if(p.giveItem(groundItem) > 0) {
 						Engine.groundItems.destroyGroundItem(groundItem);
 						p.playSound(2582);
 						//p.refreshInventory();
+					}else {
+						p.sendMessage("You do not have enough inventory space to hold this item.");
 					}
 				}
 			}
